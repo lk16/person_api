@@ -1,7 +1,12 @@
 This is a really small demo for echo in golang on a Friday afternoon
 
+### How to run:
 
-### How to use:
+```
+go run main.go
+```
+
+### How to call using curl
 
 ```sh
 curl -X POST http://localhost:1323/persons -H 'Content-Type: application/json' -d '{"name": "Luuk", "age": 30}'
