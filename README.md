@@ -1,5 +1,5 @@
 This is a really small demo for echo in golang on a Friday afternoon
-
+It was hacked up in an hour to show off how to use golang and the echo framework.
 
 ### How to use:
 
