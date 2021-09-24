@@ -1,23 +1,31 @@
 package main
 
 import (
-	"fmt"
-	"math/rand"
+	"log"
 	"net/http"
-	"strconv"
+	"os"
+	"time"
 
 	"github.com/labstack/echo/v4"
+
+	"context"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Person struct {
 	Name string `json:"name"`
 	Age  int    `json:"age"`
-	ID   int    `json:"id"`
+	ID   string `json:"id"`
 }
 
-var personDB map[int]Person
+// var personDB map[int]Person
 
-func listPersons(c echo.Context) error {
+var dbClient *mongo.Client
+
+/* func listPersons(c echo.Context) error {
 	personsList := []Person{}
 
 	for _, person := range personDB {
@@ -25,7 +33,7 @@ func listPersons(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, personsList)
-}
+} */
 
 func createPerson(c echo.Context) error {
 	var person Person
@@ -34,14 +42,22 @@ func createPerson(c echo.Context) error {
 		return err
 	}
 
-	id := rand.Intn(100)
-	person.ID = id
+	// personDB[id] = person
 
-	personDB[id] = person
-	return c.JSON(http.StatusOK, person)
+	collection := dbClient.Database("demo").Collection("person")
+
+	result, err := collection.InsertOne(context.Background(), person)
+
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "Database error")
+	}
+
+	person.ID = result.InsertedID.(primitive.ObjectID).Hex()
+
+	return c.JSON(http.StatusCreated, person)
 }
 
-func getPerson(c echo.Context) error {
+/* func getPerson(c echo.Context) error {
 	idString := c.Param("id")
 
 	id, err := strconv.Atoi(idString)
@@ -72,22 +88,27 @@ func deletePerson(c echo.Context) error {
 
 	delete(personDB, id)
 	return c.NoContent(http.StatusOK)
-}
-
-func greetingHandler(c echo.Context) error {
-	user := c.Param("user")
-	response := fmt.Sprintf("Hello, %s\n", user)
-	return c.String(http.StatusOK, response)
-}
+} */
 
 func main() {
-	personDB = make(map[int]Person)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	if err != nil {
+		log.Printf("Failed to connect to DB.")
+		os.Exit(1)
+	}
+
+	dbClient = client
+
+	//personDB = make(map[int]Person)
 	e := echo.New()
-	e.GET("/greet/:user", greetingHandler)
-	e.GET("/persons", listPersons)
+	// e.GET("/greet/:user", greetingHandler)
+	// e.GET("/persons", listPersons)
 	e.POST("/persons", createPerson)
-	e.GET("/persons/:id", getPerson)
-	e.DELETE("/persons/:id", deletePerson)
+	// e.GET("/persons/:id", getPerson)
+	// e.DELETE("/persons/:id", deletePerson)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
